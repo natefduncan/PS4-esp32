@@ -2,14 +2,19 @@
 
 #include <esp_bt_defs.h>
 #include <esp_bt_main.h>
+#include <cstring> 
+#include <chrono>
+#include <thread>
+using namespace std::this_thread;
+using namespace std::chrono; 
 
 extern "C" {
 #include "ps4.h"
 }
 
 #define ESP_BD_ADDR_HEX_PTR(addr) \
-  (uint8_t*)addr + 0, (uint8_t*)addr + 1, (uint8_t*)addr + 2, \
-  (uint8_t*)addr + 3, (uint8_t*)addr + 4, (uint8_t*)addr + 5
+  (unsigned int*)addr + 0, (unsigned int*)addr + 1, (unsigned int*)addr + 2, \
+  (unsigned int*)addr + 3, (unsigned int*)addr + 4, (unsigned int*)addr + 5
 
 PS4Controller::PS4Controller() {}
 
@@ -17,22 +22,22 @@ bool PS4Controller::begin() {
   ps4SetEventObjectCallback(this, &PS4Controller::_event_callback);
   ps4SetConnectionObjectCallback(this, &PS4Controller::_connection_callback);
 
-  if (!btStarted() && !btStart()) {
-    log_e("btStart failed");
-    return false;
-  }
+  // if (!btStarted() && !btStart()) {
+    // printf("btStart failed");
+    // return false;
+  // }
 
   esp_bluedroid_status_t btState = esp_bluedroid_get_status();
   if (btState == ESP_BLUEDROID_STATUS_UNINITIALIZED) {
     if (esp_bluedroid_init()) {
-      log_e("esp_bluedroid_init failed");
+      printf("esp_bluedroid_init failed");
       return false;
     }
   }
 
   if (btState != ESP_BLUEDROID_STATUS_ENABLED) {
     if (esp_bluedroid_enable()) {
-      log_e("esp_bluedroid_enable failed");
+      printf("esp_bluedroid_enable failed");
       return false;
     }
   }
@@ -45,7 +50,7 @@ bool PS4Controller::begin(const char* mac) {
   esp_bd_addr_t addr;
     
   if (sscanf(mac, ESP_BD_ADDR_STR, ESP_BD_ADDR_HEX_PTR(addr)) != ESP_BD_ADDR_LEN) {
-    log_e("Could not convert %s\n to a MAC address", mac);
+    printf("Could not convert %s\n to a MAC address", mac);
     return false;
   }
 
@@ -102,8 +107,7 @@ void PS4Controller::_connection_callback(void* object, uint8_t isConnected) {
   PS4Controller* This = (PS4Controller*)object;
 
   if (isConnected) {
-    delay(250);  // ToDo: figure out how to know when the channel is free again
-                 // so this delay can be removed
+	sleep_for(milliseconds(250)); 
 
     if (This->_callback_connect) {
       This->_callback_connect();
